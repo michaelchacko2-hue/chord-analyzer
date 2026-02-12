@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord Tone Analyzer</title>
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+        
+        // Custom event tracking function
+        function trackEvent(category, action, label) {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', action, {
+                    'event_category': category,
+                    'event_label': label
+                });
+            }
+        }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #252525;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --accent-gold: #d4af37;
+            --accent-blue: #4a90e2;
+            --border-subtle: #333;
+            --root-color: #d4af37;
+            --third-color: #e85d75;
+            --fifth-color: #4a90e2;
+            --seventh-color: #9b59b6;
+            --extension-color: #2ecc71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(74, 144, 226, 0.05) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .input-section {
+            background: var(--bg-card);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-subtle);
+            animation: fadeInUp 0.8s ease-out 0.2s backwards;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .hint {
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        button {
+            margin-top: 1.5rem;
+            padding: 1rem 2.5rem;
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        button:hover {
+            background: #f0c84a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .chord-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.75rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out backwards;
+        }
+
+        .chord-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-blue));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .chord-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .chord-card:hover::before {
+            opacity: 1;
+        }
+
+        .chord-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.01em;
+        }
+
+        .tone-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .tone-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tone-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tone {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border: 1px solid;
+            transition: all 0.2s ease;
+        }
+
+        .tone:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .tone.root {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: var(--root-color);
+            color: var(--root-color);
+        }
+
+        .tone.third {
+            background: rgba(232, 93, 117, 0.15);
+            border-color: var(--third-color);
+            color: var(--third-color);
+        }
+
+        .tone.fifth {
+            background: rgba(74, 144, 226, 0.15);
+            border-color: var(--fifth-color);
+            color: var(--fifth-color);
+        }
+
+        .tone.seventh {
+            background: rgba(155, 89, 182, 0.15);
+            border-color: var(--seventh-color);
+            color: var(--seventh-color);
+        }
+
+        .tone.extension {
+            background: rgba(46, 204, 113, 0.15);
+            border-color: var(--extension-color);
+            color: var(--extension-color);
+        }
+
+        .legend {
+            margin-top: 3rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            animation: fadeInUp 0.8s ease-out 0.4s backwards;
+        }
+
+        .legend-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid;
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fretboard {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .fretboard-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+
+        select {
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: var(--accent-gold);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
+        }
+
+        .toggle-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .toggle-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .toggle-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            border-color: var(--accent-gold);
+        }
+        
+        .chord-button-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .chord-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .chord-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 55, 0.1);
+        }
+        
+        .chord-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            border-color: var(--accent-gold);
+        }
+        
+        details summary {
+            outline: none;
+        }
+        
+        details[open] summary {
+            margin-bottom: 1rem;
+        }
+        
+        .preset-category {
+            margin-bottom: 1.5rem;
+        }
+        
+        .preset-category:last-child {
+            margin-bottom: 0;
+        }
+        
+        .preset-category-title {
+            font-size: 0.75rem;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .preset-btn {
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+        
+        .preset-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateX(4px);
+        }
+
+        .fretboard-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .scale-fretboard {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .note-dot.scale-note {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+            opacity: 0.3;
+        }
+
+        .note-dot.scale-note.active {
+            opacity: 1;
+        }
+
+        .note-dot.dimmed {
+            opacity: 0.15 !important;
+        }
+        
+        .open-note-indicator.dimmed {
+            opacity: 0.15 !important;
+        }
+
+        .fretboard-container {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .fretboard-grid {
+            display: grid;
+            grid-template-columns: 30px repeat(12, minmax(0, 1fr));
+            gap: 0;
+            width: 100%;
+        }
+
+        .string-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            position: relative;
+        }
+
+        .string-label.has-open-note {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .string-label .open-note-indicator {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        
+        .open-note-indicator.root {
+            background: var(--root-color);
+            border-color: var(--root-color);
+            color: var(--bg-primary);
+        }
+
+        .open-note-indicator.third {
+            background: var(--third-color);
+            border-color: var(--third-color);
+            color: var(--bg-primary);
+        }
+
+        .open-note-indicator.fifth {
+            background: var(--fifth-color);
+            border-color: var(--fifth-color);
+            color: var(--bg-primary);
+        }
+
+        .open-note-indicator.seventh {
+            background: var(--seventh-color);
+            border-color: var(--seventh-color);
+            color: var(--bg-primary);
+        }
+
+        .open-note-indicator.extension {
+            background: var(--extension-color);
+            border-color: var(--extension-color);
+            color: var(--bg-primary);
+        }
+        
+        .open-note-indicator.fourth,
+        .open-note-indicator.second,
+        .open-note-indicator.sixth {
+            background: var(--third-color);
+            border-color: var(--third-color);
+            color: var(--bg-primary);
+        }
+
+        .note-dot.overlay {
+            opacity: 0.6;
+        }
+
+        .note-dot.overlay.active {
+            opacity: 0.8;
+        }
+
+        .fret-marker {
+            position: relative;
+            height: 32px;
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .fret-marker:first-child {
+            border-left: 3px solid var(--text-secondary);
+        }
+
+        .fret-marker.fret-0 {
+            border-left: 3px solid var(--text-secondary);
+        }
+
+        .fret-marker::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border-subtle);
+            transform: translateY(-50%);
+        }
+
+        .note-dot {
+            position: relative;
+            z-index: 2;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            border: 2px solid;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .note-dot.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .note-dot:hover {
+            transform: scale(1.15);
+        }
+
+        .note-dot.root {
+            background: var(--root-color);
+            border-color: var(--root-color);
+            color: var(--bg-primary);
+        }
+
+        .note-dot.third {
+            background: var(--third-color);
+            border-color: var(--third-color);
+            color: var(--bg-primary);
+        }
+
+        .note-dot.fifth {
+            background: var(--fifth-color);
+            border-color: var(--fifth-color);
+            color: var(--bg-primary);
+        }
+
+        .note-dot.seventh {
+            background: var(--seventh-color);
+            border-color: var(--seventh-color);
+            color: var(--bg-primary);
+        }
+
+        .note-dot.extension {
+            background: var(--extension-color);
+            border-color: var(--extension-color);
+            color: var(--bg-primary);
+        }
+
+        .fret-number {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 30px repeat(12, minmax(0, 1fr));
+            gap: 0;
+            margin-top: 0.5rem;
+        }
+
+        .fret-num {
+            text-align: center;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .fret-num:first-child {
+            opacity: 0;
+        }
+
+        .fret-inlay {
+            position: relative;
+        }
+
+        .fret-inlay::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--border-subtle);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .results {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 1.5rem;
+            }
+
+            .fretboard-container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chord Tone Analyzer</h1>
+            <p class="subtitle">Target notes for improvisation</p>
+        </header>
+
+        <div class="input-section">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap;">
+                <label for="progression" style="margin: 0;">Enter Chord Progression</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="toggle-btn" id="interval-toggle" onclick="toggleIntervals()" style="margin: 0; padding: 0.4rem 0.8rem;">
+                        Show Intervals
+                    </button>
+                    <button class="toggle-btn active" id="notation-toggle" onclick="toggleNotation()" style="margin: 0; padding: 0.4rem 0.8rem;">
+                        Using Flats
+                    </button>
+                </div>
+            </div>
+            <input 
+                type="text" 
+                id="progression" 
+                placeholder="e.g., Cmaj7 Am7 Dm7 G7"
+                autocomplete="off"
+            >
+            <p class="hint">Supported formats: C, Cmaj7, Cm7, C7, Cdim, Caug, Csus4, C6, Cmaj9, etc.</p>
+            
+            <details style="margin-top: 1rem;">
+                <summary style="cursor: pointer; color: var(--accent-gold); font-size: 0.9rem; margin-bottom: 0.5rem; user-select: none;">
+                    Or choose a common progression
+                </summary>
+                <div id="progression-presets" style="margin-top: 1rem;"></div>
+            </details>
+            
+            <button onclick="analyzeProgression()">Analyze Progression</button>
+            <div id="error"></div>
+        </div>
+
+        <div id="results"></div>
+
+        <div class="legend">
+            <div class="legend-title">Color Legend</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(212, 175, 55, 0.15); border-color: var(--root-color);"></div>
+                    <span>Root (1)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(232, 93, 117, 0.15); border-color: var(--third-color);"></div>
+                    <span>Third (3)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(74, 144, 226, 0.15); border-color: var(--fifth-color);"></div>
+                    <span>Fifth (5)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(155, 89, 182, 0.15); border-color: var(--seventh-color);"></div>
+                    <span>Seventh (7)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(46, 204, 113, 0.15); border-color: var(--extension-color);"></div>
+                    <span>Extensions (9, 11, 13)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+        const FLAT_TO_SHARP = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+        const SHARP_TO_FLAT = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
+        
+        // User preference for note display
+        let useFlats = true;
+        let currentScale = null;
+        let showIntervals = false; // Toggle between note names and intervals
+        
+        // Common chord progressions
+        const COMMON_PROGRESSIONS = {
+            'Pop/Rock': {
+                'I-V-vi-IV (C-G-Am-F)': 'C G Am F',
+                'I-IV-V (C-F-G)': 'C F G',
+                'vi-IV-I-V (Am-F-C-G)': 'Am F C G',
+                'I-vi-IV-V (C-Am-F-G)': 'C Am F G',
+            },
+            'Jazz': {
+                'ii-V-I (Dm7-G7-Cmaj7)': 'Dm7 G7 Cmaj7',
+                'I-vi-ii-V (Cmaj7-Am7-Dm7-G7)': 'Cmaj7 Am7 Dm7 G7',
+                'iii-VI-ii-V (Em7-A7-Dm7-G7)': 'Em7 A7 Dm7 G7',
+            },
+            'Blues': {
+                '12-Bar Blues in C (C7-F7-G7)': 'C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7',
+                'Minor Blues (Cm7-Fm7-G7)': 'Cm7 Fm7 Cm7 Cm7 Fm7 Fm7 Cm7 Cm7 G7 Fm7 Cm7 G7',
+            },
+            'Classical/Common': {
+                'I-IV-I-V (C-F-C-G)': 'C F C G',
+                'I-V-vi-iii-IV-I-IV-V (C-G-Am-Em-F-C-F-G)': 'C G Am Em F C F G',
+            },
+            'Minor Keys': {
+                'i-iv-V (Am-Dm-E)': 'Am Dm E',
+                'i-VI-III-VII (Am-F-C-G)': 'Am F C G',
+                'i-iv-i-V (Am-Dm-Am-E7)': 'Am Dm Am E7',
+            }
+        };
+        
+        // Get current note array based on preference
+        function getNOTES() {
+            return useFlats ? NOTES_FLAT : NOTES_SHARP;
+        }
+        
+        // Standard guitar tuning (high E to low E - matching visual orientation looking down at guitar)
+        const GUITAR_TUNING = ['E', 'B', 'G', 'D', 'A', 'E'];
+        const NUM_FRETS = 12;
+        
+        // Scale definitions (intervals from root)
+        const SCALES = {
+            'Major': [0, 2, 4, 5, 7, 9, 11],
+            'Minor (Natural)': [0, 2, 3, 5, 7, 8, 10],
+            'Minor (Harmonic)': [0, 2, 3, 5, 7, 8, 11],
+            'Minor (Melodic)': [0, 2, 3, 5, 7, 9, 11],
+            'Dorian': [0, 2, 3, 5, 7, 9, 10],
+            'Phrygian': [0, 1, 3, 5, 7, 8, 10],
+            'Lydian': [0, 2, 4, 6, 7, 9, 11],
+            'Mixolydian': [0, 2, 4, 5, 7, 9, 10],
+            'Locrian': [0, 1, 3, 5, 6, 8, 10],
+            'Blues': [0, 3, 5, 6, 7, 10],
+            'Pentatonic Major': [0, 2, 4, 7, 9],
+            'Pentatonic Minor': [0, 3, 5, 7, 10]
+        };
+
+        function normalizeNote(note) {
+            return FLAT_TO_SHARP[note] || note;
+        }
+        
+        function displayNote(note) {
+            if (useFlats && SHARP_TO_FLAT[note]) {
+                return SHARP_TO_FLAT[note];
+            }
+            return note;
+        }
+        
+        function getIntervalName(label) {
+            const intervalMap = {
+                'root': 'R',
+                'second': '2',
+                'third': '3',
+                'fourth': '4',
+                'fifth': '5',
+                'sixth': '6',
+                'seventh': '7',
+                'extension': '9/11/13'
+            };
+            return intervalMap[label] || label;
+        }
+        
+        function getDisplayText(note, label) {
+            if (showIntervals) {
+                return getIntervalName(label);
+            }
+            return displayNote(note);
+        }
+
+        function getNoteFromInterval(root, semitones) {
+            const NOTES = getNOTES();
+            const rootIndex = NOTES.indexOf(normalizeNote(root));
+            const noteIndex = (rootIndex + semitones) % 12;
+            return NOTES[noteIndex];
+        }
+
+        function getFretboardNotes() {
+            const NOTES = getNOTES();
+            const fretboard = [];
+            GUITAR_TUNING.forEach((openString, stringIdx) => {
+                const stringNotes = [];
+                const openStringIndex = NOTES_SHARP.indexOf(normalizeNote(openString));
+                
+                for (let fret = 0; fret <= NUM_FRETS; fret++) {
+                    const noteIndex = (openStringIndex + fret) % 12;
+                    stringNotes.push(NOTES[noteIndex]);
+                }
+                fretboard.push(stringNotes);
+            });
+            return fretboard;
+        }
+        
+        function getScaleNotes(root, scaleName) {
+            const intervals = SCALES[scaleName];
+            if (!intervals) return [];
+            
+            const scaleNotes = intervals.map(interval => {
+                return normalizeNote(getNoteFromInterval(root, interval));
+            });
+            return scaleNotes;
+        }
+
+        function parseChord(chordName) {
+            chordName = chordName.trim();
+            
+            const rootMatch = chordName.match(/^([A-G][#b]?)/);
+            if (!rootMatch) return null;
+            
+            const root = rootMatch[1];
+            const quality = chordName.slice(root.length);
+
+            const chordTypes = {
+                '': { intervals: [0, 4, 7], labels: ['root', 'third', 'fifth'] },
+                'm': { intervals: [0, 3, 7], labels: ['root', 'third', 'fifth'] },
+                'maj7': { intervals: [0, 4, 7, 11], labels: ['root', 'third', 'fifth', 'seventh'] },
+                'M7': { intervals: [0, 4, 7, 11], labels: ['root', 'third', 'fifth', 'seventh'] },
+                'm7': { intervals: [0, 3, 7, 10], labels: ['root', 'third', 'fifth', 'seventh'] },
+                '7': { intervals: [0, 4, 7, 10], labels: ['root', 'third', 'fifth', 'seventh'] },
+                'dim': { intervals: [0, 3, 6], labels: ['root', 'third', 'fifth'] },
+                'dim7': { intervals: [0, 3, 6, 9], labels: ['root', 'third', 'fifth', 'seventh'] },
+                'aug': { intervals: [0, 4, 8], labels: ['root', 'third', 'fifth'] },
+                'sus4': { intervals: [0, 5, 7], labels: ['root', 'fourth', 'fifth'] },
+                'sus2': { intervals: [0, 2, 7], labels: ['root', 'second', 'fifth'] },
+                '6': { intervals: [0, 4, 7, 9], labels: ['root', 'third', 'fifth', 'sixth'] },
+                'm6': { intervals: [0, 3, 7, 9], labels: ['root', 'third', 'fifth', 'sixth'] },
+                'maj9': { intervals: [0, 4, 7, 11, 14], labels: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+                '9': { intervals: [0, 4, 7, 10, 14], labels: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+                'm9': { intervals: [0, 3, 7, 10, 14], labels: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+                'add9': { intervals: [0, 4, 7, 14], labels: ['root', 'third', 'fifth', 'extension'] },
+                '11': { intervals: [0, 4, 7, 10, 14, 17], labels: ['root', 'third', 'fifth', 'seventh', 'extension', 'extension'] },
+                '13': { intervals: [0, 4, 7, 10, 14, 21], labels: ['root', 'third', 'fifth', 'seventh', 'extension', 'extension'] },
+            };
+
+            const chordInfo = chordTypes[quality];
+            if (!chordInfo) return null;
+
+            const notes = chordInfo.intervals.map((interval, idx) => ({
+                note: getNoteFromInterval(root, interval),
+                label: chordInfo.labels[idx]
+            }));
+
+            return {
+                name: chordName,
+                root: normalizeNote(root),
+                quality: quality || 'major',
+                notes: notes
+            };
+        }
+
+        function analyzeProgression() {
+            const input = document.getElementById('progression').value;
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (!input.trim()) {
+                errorDiv.innerHTML = '<div class="error">Please enter a chord progression</div>';
+                return;
+            }
+
+            const chordNames = input.split(/[\s,]+/).filter(c => c);
+            const chords = [];
+            const errors = [];
+
+            chordNames.forEach((chordName, idx) => {
+                const parsed = parseChord(chordName);
+                if (parsed) {
+                    chords.push(parsed);
+                } else {
+                    errors.push(`"${chordName}" (chord ${idx + 1})`);
+                }
+            });
+
+            if (errors.length > 0) {
+                errorDiv.innerHTML = `<div class="error">Could not parse: ${errors.join(', ')}</div>`;
+            }
+
+            if (chords.length === 0) {
+                resultsDiv.innerHTML = '<div class="empty-state">No valid chords found</div>';
+                return;
+            }
+
+            // Track progression analysis
+            trackEvent('Progression', 'Analyze', input);
+            trackEvent('Usage', 'Chord Count', chords.length.toString());
+
+            displayChords(chords);
+        }
+
+        function displayChords(chords) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="results"></div>';
+            const resultsGrid = resultsDiv.querySelector('.results');
+
+            chords.forEach((chord, idx) => {
+                const card = document.createElement('div');
+                card.className = 'chord-card';
+                card.style.animationDelay = `${idx * 0.1}s`;
+
+                const notesByType = {
+                    root: [],
+                    third: [],
+                    fourth: [],
+                    second: [],
+                    fifth: [],
+                    sixth: [],
+                    seventh: [],
+                    extension: []
+                };
+
+                chord.notes.forEach(({ note, label }) => {
+                    notesByType[label].push(note);
+                });
+
+                let html = `<div class="chord-name">${chord.name}</div>`;
+
+                if (notesByType.root.length > 0) {
+                    html += `
+                        <div class="tone-section">
+                            <div class="section-title">Root</div>
+                            <div class="tone-list">
+                                ${notesByType.root.map(note => `<span class="tone root">${showIntervals ? 'R' : displayNote(note)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const thirdGroup = [...notesByType.third, ...notesByType.second, ...notesByType.fourth];
+                if (thirdGroup.length > 0) {
+                    html += `
+                        <div class="tone-section">
+                            <div class="section-title">Third / Color</div>
+                            <div class="tone-list">
+                                ${thirdGroup.map(note => `<span class="tone third">${showIntervals ? '3' : displayNote(note)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const fifthGroup = [...notesByType.fifth, ...notesByType.sixth];
+                if (fifthGroup.length > 0) {
+                    html += `
+                        <div class="tone-section">
+                            <div class="section-title">Fifth / Sixth</div>
+                            <div class="tone-list">
+                                ${fifthGroup.map(note => `<span class="tone fifth">${showIntervals ? '5' : displayNote(note)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (notesByType.seventh.length > 0) {
+                    html += `
+                        <div class="tone-section">
+                            <div class="section-title">Seventh</div>
+                            <div class="tone-list">
+                                ${notesByType.seventh.map(note => `<span class="tone seventh">${showIntervals ? '7' : displayNote(note)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (notesByType.extension.length > 0) {
+                    html += `
+                        <div class="tone-section">
+                            <div class="section-title">Extensions (9, 11, 13)</div>
+                            <div class="tone-list">
+                                ${notesByType.extension.map(note => `<span class="tone extension">${showIntervals ? '9/11/13' : displayNote(note)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = html;
+                
+                // Add chord tones fretboard
+                const fretboardSection = createFretboard(chord, false);
+                card.appendChild(fretboardSection);
+                
+                resultsGrid.appendChild(card);
+            });
+            
+            // Add chord overlay fretboard at the end if there are multiple chords
+            if (chords.length > 1) {
+                const overlaySection = createChordOverlayFretboard(chords);
+                resultsDiv.appendChild(overlaySection);
+            }
+        }
+
+        function createFretboard(chord, showOpenNotes = true) {
+            const fretboardDiv = document.createElement('div');
+            fretboardDiv.className = 'fretboard';
+            
+            const chordNoteSet = new Map();
+            chord.notes.forEach(({ note, label }) => {
+                const normalizedNote = normalizeNote(note);
+                if (!chordNoteSet.has(normalizedNote)) {
+                    chordNoteSet.set(normalizedNote, label);
+                }
+            });
+
+            const fretboard = getFretboardNotes();
+            const inlayFrets = [3, 5, 7, 9, 12];
+
+            let html = `
+                <div class="fretboard-title">Chord Tones</div>
+                <div class="fretboard-container">
+                    <div class="fretboard-grid">
+            `;
+
+            // Render each string
+            fretboard.forEach((stringNotes, stringIdx) => {
+                // Check if open string is a chord tone
+                const openNote = stringNotes[0];
+                const openNoteLabel = chordNoteSet.get(normalizeNote(openNote));
+                
+                // String label with open note indicator if applicable
+                if (openNoteLabel && showOpenNotes) {
+                    const displayText = getDisplayText(openNote, openNoteLabel);
+                    html += `
+                        <div class="string-label has-open-note">
+                            <div class="open-note-indicator ${openNoteLabel}">${displayText}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `<div class="string-label">${GUITAR_TUNING[stringIdx]}</div>`;
+                }
+                
+                // Frets for this string (skip open string, start from fret 1)
+                for (let fretIdx = 1; fretIdx <= NUM_FRETS; fretIdx++) {
+                    const note = stringNotes[fretIdx];
+                    const noteLabel = chordNoteSet.get(normalizeNote(note));
+                    const isInlay = inlayFrets.includes(fretIdx);
+                    const fretClass = isInlay ? 'fret-marker fret-inlay' : 'fret-marker';
+                    
+                    if (noteLabel) {
+                        const displayText = getDisplayText(note, noteLabel);
+                        html += `
+                            <div class="${fretClass} fret-${fretIdx}">
+                                <div class="note-dot ${noteLabel} active">${displayText}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="${fretClass} fret-${fretIdx}">
+                                <div class="note-dot"></div>
+                            </div>
+                        `;
+                    }
+                }
+            });
+
+            // Fret numbers
+            html += `</div><div class="fret-number">`;
+            html += `<div class="fret-num"></div>`; // Empty for string labels column
+            for (let i = 1; i <= NUM_FRETS; i++) {
+                html += `<div class="fret-num">${i}</div>`;
+            }
+            html += `</div></div>`;
+
+            fretboardDiv.innerHTML = html;
+            return fretboardDiv;
+        }
+
+        function createChordOverlayFretboard(chords) {
+            const overlayDiv = document.createElement('div');
+            overlayDiv.className = 'chord-card';
+            overlayDiv.style.gridColumn = '1 / -1';
+            overlayDiv.style.marginTop = '2rem';
+            
+            const fretboard = getFretboardNotes();
+            const inlayFrets = [3, 5, 7, 9, 12];
+
+            let html = `
+                <div class="chord-name">Chord Overlay</div>
+                <div class="fretboard-controls">
+                    <div class="control-group">
+                        <label>Highlight:</label>
+                        <div class="chord-button-group">
+                            <button class="chord-btn active" onclick="highlightChord('all')">All Chords</button>
+                            ${chords.map(chord => `<button class="chord-btn" onclick="highlightChord('${chord.name}')">${chord.name}</button>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div class="fretboard-container">
+                    <div class="fretboard-grid" id="overlay-grid">
+            `;
+
+            // Build combined note set with chord associations
+            const allNotes = new Map(); // note -> [{chordName, label}, ...]
+            chords.forEach(chord => {
+                chord.notes.forEach(({ note, label }) => {
+                    const normalizedNote = normalizeNote(note);
+                    if (!allNotes.has(normalizedNote)) {
+                        allNotes.set(normalizedNote, []);
+                    }
+                    allNotes.get(normalizedNote).push({ chordName: chord.name, label });
+                });
+            });
+
+            // Render each string
+            fretboard.forEach((stringNotes, stringIdx) => {
+                // Check if open string has any chord tones
+                const openNote = stringNotes[0];
+                const normalizedOpenNote = normalizeNote(openNote);
+                const openNoteData = allNotes.get(normalizedOpenNote);
+                
+                if (openNoteData && openNoteData.length > 0) {
+                    // Use the first chord's label for coloring
+                    const primaryLabel = openNoteData[0].label;
+                    const chordNames = openNoteData.map(d => d.chordName).join(',');
+                    const displayText = getDisplayText(openNote, primaryLabel);
+                    html += `
+                        <div class="string-label has-open-note">
+                            <div class="open-note-indicator ${primaryLabel} overlay-note" data-note="${normalizedOpenNote}" data-chords="${chordNames}">${displayText}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `<div class="string-label">${GUITAR_TUNING[stringIdx]}</div>`;
+                }
+                
+                // Frets for this string (skip open, start from 1)
+                for (let fretIdx = 1; fretIdx <= NUM_FRETS; fretIdx++) {
+                    const note = stringNotes[fretIdx];
+                    const normalizedNote = normalizeNote(note);
+                    const noteData = allNotes.get(normalizedNote);
+                    const isInlay = inlayFrets.includes(fretIdx);
+                    const fretClass = isInlay ? 'fret-marker fret-inlay' : 'fret-marker';
+                    
+                    if (noteData && noteData.length > 0) {
+                        // Use first chord's label for primary color
+                        const primaryLabel = noteData[0].label;
+                        const chordNames = noteData.map(d => d.chordName).join(',');
+                        const displayText = getDisplayText(note, primaryLabel);
+                        html += `
+                            <div class="${fretClass} fret-${fretIdx}">
+                                <div class="note-dot ${primaryLabel} active overlay-note" data-note="${normalizedNote}" data-chords="${chordNames}">${displayText}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="${fretClass} fret-${fretIdx}">
+                                <div class="note-dot"></div>
+                            </div>
+                        `;
+                    }
+                }
+            });
+
+            // Fret numbers
+            html += `</div><div class="fret-number">`;
+            html += `<div class="fret-num"></div>`;
+            for (let i = 1; i <= NUM_FRETS; i++) {
+                html += `<div class="fret-num">${i}</div>`;
+            }
+            html += `</div></div>`;
+
+            overlayDiv.innerHTML = html;
+            return overlayDiv;
+        }
+
+        function highlightChord(chordName) {
+            // Track chord highlighting
+            trackEvent('Overlay', 'Highlight Chord', chordName);
+            
+            // Update button states
+            const buttons = document.querySelectorAll('.chord-btn');
+            buttons.forEach(btn => {
+                if ((chordName === 'all' && btn.textContent === 'All Chords') || 
+                    btn.textContent === chordName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Update note highlighting
+            const allNotes = document.querySelectorAll('.overlay-note');
+            
+            allNotes.forEach(note => {
+                if (chordName === 'all') {
+                    // Show all notes normally
+                    note.classList.remove('dimmed');
+                } else {
+                    // Check if this note belongs to the selected chord
+                    const chords = note.getAttribute('data-chords');
+                    if (chords && chords.split(',').includes(chordName)) {
+                        note.classList.remove('dimmed');
+                    } else {
+                        note.classList.add('dimmed');
+                    }
+                }
+            });
+        }
+
+        document.getElementById('progression').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                analyzeProgression();
+            }
+        });
+        
+        function toggleNotation() {
+            useFlats = !useFlats;
+            const btn = document.getElementById('notation-toggle');
+            btn.textContent = useFlats ? 'Using Flats' : 'Using Sharps';
+            btn.classList.toggle('active', useFlats);
+            
+            // Track toggle
+            trackEvent('Settings', 'Toggle Notation', useFlats ? 'Flats' : 'Sharps');
+            
+            // Re-analyze if there are current results
+            const resultsDiv = document.getElementById('results');
+            if (resultsDiv.querySelector('.chord-card')) {
+                analyzeProgression();
+            }
+        }
+        
+        function toggleIntervals() {
+            showIntervals = !showIntervals;
+            const btn = document.getElementById('interval-toggle');
+            btn.textContent = showIntervals ? 'Show Note Names' : 'Show Intervals';
+            btn.classList.toggle('active', showIntervals);
+            
+            // Track toggle
+            trackEvent('Settings', 'Toggle Display', showIntervals ? 'Intervals' : 'Note Names');
+            
+            // Re-analyze if there are current results
+            const resultsDiv = document.getElementById('results');
+            if (resultsDiv.querySelector('.chord-card')) {
+                analyzeProgression();
+            }
+        }
+        
+        function loadPreset(progression) {
+            document.getElementById('progression').value = progression;
+            
+            // Track preset usage
+            trackEvent('Presets', 'Load', progression);
+            
+            analyzeProgression();
+            
+            // Scroll to results
+            setTimeout(() => {
+                const resultsDiv = document.getElementById('results');
+                if (resultsDiv) {
+                    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
+        
+        // Initialize progression presets on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const presetsContainer = document.getElementById('progression-presets');
+            let html = '';
+            
+            Object.entries(COMMON_PROGRESSIONS).forEach(([category, progressions]) => {
+                html += `<div class="preset-category">`;
+                html += `<div class="preset-category-title">${category}</div>`;
+                html += `<div class="preset-buttons">`;
+                
+                Object.entries(progressions).forEach(([name, chords]) => {
+                    html += `<button class="preset-btn" onclick="loadPreset('${chords}')">${name}</button>`;
+                });
+                
+                html += `</div></div>`;
+            });
+            
+            presetsContainer.innerHTML = html;
+        });
+    </script>
+</body>
+</html>
